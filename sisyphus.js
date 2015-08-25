@@ -168,12 +168,12 @@
 					if ( ! this.browserStorage.isAvailable() ) {
 						return false;
 					}
-
-					var callback_result = self.options.onBeforeRestore.call( self );
-					if ( callback_result === undefined || callback_result ) {
-						self.restoreAllData();
+					if ( this.restoreCanBeMade() ) {
+						var callback_result = self.options.onBeforeRestore.call( self );
+						if ( callback_result === undefined || callback_result ) {
+							self.restoreAllData();
+						}	
 					}
-
 					if ( this.options.autoRelease ) {
 						self.bindReleaseData();
 					}
@@ -311,6 +311,7 @@
 				 * @return void
 				 */
 				restoreAllData: function() {
+
 					var self = this;
 					var restored = false;
 
@@ -338,6 +339,30 @@
 					}
 				},
 
+				restoreCanBeMade: function(){
+
+					var self = this;
+					var restored = false;
+
+					self.targets.each( function() {
+						var target = $( this );
+						var targetFormIdAndName = getElementIdentifier( $( this ) );
+
+						self.findFieldsToProtect( target ).each( function() {
+							if ( $.inArray( this, self.options.excludeFields ) !== -1 ) {
+								// Returning non-false is the same as a continue statement in a for loop; it will skip immediately to the next iteration.
+								return true;
+							}
+							var field = $( this );
+							var prefix = (self.options.locationBased ? self.href : "") + targetFormIdAndName + getElementIdentifier( field ) + self.options.customKeySuffix;
+							var resque = self.browserStorage.get( prefix );
+							if ( resque !== null ) {
+								restored = true;
+							}
+						} );
+					} );
+					return restored;
+				},
 				/**
 				 * Restore form field data from local storage
 				 *
@@ -410,8 +435,7 @@
 				 * @return void
 				 */
 				saveToBrowserStorage: function( key, value, fireCallback ) {
-					var self = this;
-					
+					var self = this;	
 					var callback_result = self.options.onBeforeSave.call( self );
 					if ( callback_result !== undefined && callback_result === false ) {
 						return;
